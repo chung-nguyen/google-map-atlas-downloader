@@ -1,0 +1,19 @@
+{
+  "name": "maptiledownloader",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^10.1.0"
+  },
+  "dependencies": {
+    "async-batch": "^1.0.4",
+    "axios": "^0.20.0",
+    "jimp": "^0.16.1"
+  }
+}

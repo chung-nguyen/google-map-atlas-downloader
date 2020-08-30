@@ -1,0 +1,125 @@
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Google Map Tile Downloader</title>
+  <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
+</head>
+
+<body>
+
+  <div>
+    <label>Lat - Long:</label>
+    <input name="position" type="text" value="10.72933,106.7218233" />
+  </div>
+
+  <div>
+    <label>Size (in tiles):</label>
+    <input name="size" type="number" value="4" />
+  </div>
+
+  <div>
+    <label>Zoom:</label>
+    <input name="zoom" type="number" value="18" />
+  </div>
+
+  <div>
+    <label>Layers:</label>
+
+    <select name="layer">
+      <option value="s">Satellite only</option>
+      <option value="h">Roads only</option>
+      <option value="m">Standard Roadmap</option>
+      <option value="p">Terrain</option>
+      <option value="r">Altered Roadmap</option>
+      <option value="t">Terrain only</option>
+      <option value="y">Hybrid</option>
+    </select>
+  </div>
+
+  <div>
+    <label>Max Job Threads:</label>
+    <input name="maxJobs" type="number" value="12" />
+  </div>
+
+  <div>
+    <label>Max Atlas Size:</label>
+    <input name="maxAtlasSize" type="number" value="2048" />
+  </div>
+
+  <div>
+    <button id="buttonGenerate">GENERATE</button>
+  </div>
+
+  <div id="progressFrame" style="display:none">
+    <label for="file">Downloading progress:</label>
+    <progress id="progressBar" value="0" max="100"></progress>
+  </div>
+</body>
+
+
+<script type="text/javascript">  
+  var electron = require('electron');
+  var ipc = electron.ipcRenderer;
+
+  var progressFrame = document.getElementById('progressFrame');
+  var buttonGenerate = document.getElementById('buttonGenerate');
+  buttonGenerate.addEventListener('click', function () {
+    buttonGenerate.disabled = true;    
+
+    var inputPositions = document.getElementsByName('position')[0].value.split(',');
+    var inputSize = document.getElementsByName('size')[0].value;
+    var inputZoom = document.getElementsByName('zoom')[0].value;
+    var inputLayer = document.getElementsByName('layer')[0].value;
+    var inputMaxJobs = document.getElementsByName('maxJobs')[0].value;
+    var inputMaxAtlasSize = document.getElementsByName('maxAtlasSize')[0].value;
+
+    var lat = parseFloat(inputPositions[0]);
+    var lat_rad = lat * Math.PI / 180;
+    var lon = parseFloat(inputPositions[1]);
+    var zoom = parseInt(inputZoom);
+    var size = parseInt(inputSize);
+    var maxJobs = parseInt(inputMaxJobs);
+    var maxAtlasSize = parseInt(inputMaxAtlasSize);
+
+    var n = Math.pow(2, zoom);
+    var xtile = Math.floor(n * ((lon + 180) / 360));
+    var ytile = Math.floor(n * (1 - (Math.log(Math.tan(lat_rad) + (1 / Math.cos(lat_rad))) / Math.PI)) / 2);
+
+    progressFrame.style.display = 'block';    
+
+    ipc.send('generateMap', { 
+      zoom: zoom, 
+      size: size,
+      xtile: xtile,
+      ytile: ytile,
+      layer: inputLayer,
+      maxJobs: maxJobs,
+      maxAtlasSize: maxAtlasSize
+    });
+  });
+
+  setInterval(function () {
+    ipc.send('queryGenerateProgress', {});
+  }, 100);
+  
+  ipc.on('replyGenerateProgress', function (event, response) {
+    document.getElementById('progressBar').value = response.processed * 100 / response.total;
+  });    
+
+  ipc.on('generateMapDone', function (event, response) {
+    buttonGenerate.disabled = false;
+    progressFrame.style.display = 'none';
+
+    alert('DONE!');
+  });
+
+  ipc.on('generateMapFailed', function (event, response) {
+    buttonGenerate.disabled = false;
+    progressFrame.style.display = 'none';
+
+    alert('Map generation failed!');
+  });
+</script>
+
+</html>
